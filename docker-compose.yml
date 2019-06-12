@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  sources-client:
+      container_name: sources_client
+      build:
+          context: .
+          dockerfile: Dockerfile-env
+      working_dir: /sources_client
+      entrypoint:
+        - /koku/run_server.sh
+      environment:
+        - DATABASE_NAME=${DATABASE_NAME-sources}
+        - DATABASE_USER=${DATABASE_USER-postgres}
+        - DATABASE_PASSWORD=${DATABASE_PASSWORD-postgres}
+      privileged: true
+      ports:
+          - 8000:8000
+      volumes:
+        - '.:/sources_client/'
+      links:
+        - sources-db
+      depends_on:
+        - sources-db
+
+  sources-db:
+    container_name: sources_db
+    image: postgres:9.6
+    environment:
+    - POSTGRES_DB=${DATABASE_NAME-sources}
+    - POSTGRES_USER=${DATABASE_USER-postgres}
+    - POSTGRES_PASSWORD=${DATABASE_PASSWORD-postgres}
+    ports:
+      - "15436:5432"
+    volumes:
+      - ./pg_data:/var/lib/pgsql/data
+
+networks:
+  default:
+    external:
+      name: koku-network
