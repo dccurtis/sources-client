@@ -5,14 +5,17 @@ services:
       container_name: sources_client
       build:
           context: .
-          dockerfile: Dockerfile-env
+          dockerfile: Dockerfile
       working_dir: /sources_client
       entrypoint:
-        - /koku/run_server.sh
+        - /sources_client/run_server.sh
       environment:
         - DATABASE_NAME=${DATABASE_NAME-sources}
         - DATABASE_USER=${DATABASE_USER-postgres}
         - DATABASE_PASSWORD=${DATABASE_PASSWORD-postgres}
+        - POSTGRES_SQL_SERVICE_HOST=sources-db
+        - POSTGRES_SQL_SERVICE_PORT=5432
+
       privileged: true
       ports:
           - 8888:8888

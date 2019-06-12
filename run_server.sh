@@ -1,3 +1,4 @@
 #!/bin/sh
-python sources_client/client.py
+sleep 15
+python sources_client/app.py
 
