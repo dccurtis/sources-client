@@ -15,7 +15,7 @@ services:
         - DATABASE_PASSWORD=${DATABASE_PASSWORD-postgres}
       privileged: true
       ports:
-          - 8000:8000
+          - 8888:8888
       volumes:
         - '.:/sources_client/'
       links:

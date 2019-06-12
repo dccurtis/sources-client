@@ -1,11 +1,11 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "7e7ef69da7248742e869378f8421880cf8f0017f96d94d086813baa518a65489"
+            "sha256": "5e33492335b0d5bb72fd7e6a82d8109762946504a71aae225e43d370a135f179"
         },
         "pipfile-spec": 6,
         "requires": {
-            "python_version": "3.7"
+            "python_version": "3.6"
         },
         "sources": [
             {
@@ -15,6 +15,14 @@
             }
         ]
     },
-    "default": {},
+    "default": {
+        "tornado": {
+            "hashes": [
+                "sha256:4a5f0b1b381d80ec320c7c8f3265e6008afc527cc35b6c36d03acf18c21fcac6"
+            ],
+            "index": "pypi",
+            "version": "==3.2.1"
+        }
+    },
     "develop": {}
 }
