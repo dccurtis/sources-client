@@ -4,18 +4,9 @@ import tornado.web
 from tornado_sqlalchemy import make_session_factory
 from tornado.gen import coroutine
 from tornado_sqlalchemy import SessionMixin, as_future
-from sqlalchemy.orm import scoped_session, sessionmaker
 
-from sqlalchemy import Column, BigInteger, String
-from tornado_sqlalchemy import declarative_base
-# from models import create_all
+from models import create_all, User
 
-DeclarativeBase = declarative_base()
-class User(DeclarativeBase):
-    __tablename__ = 'users'
-
-    id = Column(BigInteger, primary_key=True)
-    username = Column(String(255), unique=True)
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -46,8 +37,7 @@ class Application(tornado.web.Application):
         print(database_url)
         
         factory = make_session_factory(database_url)
-        # create_all()
-        DeclarativeBase.metadata.create_all(factory.engine)
+        create_all(factory.engine)
 
         tornado.web.Application.__init__(self, handlers, session_factory=factory)
 

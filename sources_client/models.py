@@ -1,7 +1,4 @@
-import os
-
-from sqlalchemy import create_engine
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, BigInteger
+from sqlalchemy import Column, String, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -17,7 +14,6 @@ def __repr__(self):
     return "<User('%s')>" % (self.username)
 
 users_table = User.__table__
-metadata = DeclarativeBase.metadata
 
-def create_all():
-    metadata.create_all(engine)
+def create_all(engine):
+    DeclarativeBase.metadata.create_all(engine)
