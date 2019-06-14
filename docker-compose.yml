@@ -15,6 +15,7 @@ services:
         - DATABASE_PASSWORD=${DATABASE_PASSWORD-postgres}
         - POSTGRES_SQL_SERVICE_HOST=sources-db
         - POSTGRES_SQL_SERVICE_PORT=5432
+        - SOURCES_KAFKA_TOPIC=${SOURCES_KAFKA_TOPIC-platform.sources.event-stream}
 
       privileged: true
       ports:
@@ -41,4 +42,4 @@ services:
 networks:
   default:
     external:
-      name: koku-network
+      name: sources-client-network
