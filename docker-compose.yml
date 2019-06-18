@@ -10,11 +10,14 @@ services:
       entrypoint:
         - /sources_client/run_server.sh
       environment:
+        - LOG_LEVEL=INFO
         - DATABASE_NAME=${DATABASE_NAME-sources}
         - DATABASE_USER=${DATABASE_USER-postgres}
         - DATABASE_PASSWORD=${DATABASE_PASSWORD-postgres}
         - POSTGRES_SQL_SERVICE_HOST=sources-db
         - POSTGRES_SQL_SERVICE_PORT=5432
+        - SOURCES_KAFKA_HOST=${SOURCES_KAFKA_HOST-kafka}
+        - SOURCES_KAFKA_PORT=${SOURCES_KAFKA_HOST-29092}
         - SOURCES_KAFKA_TOPIC=${SOURCES_KAFKA_TOPIC-platform.sources.event-stream}
 
       privileged: true
