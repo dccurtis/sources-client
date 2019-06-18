@@ -10,7 +10,7 @@ from tornado_sqlalchemy import SessionMixin, as_future
 
 from config import Config
 from storage import StorageLayer
-from models import User
+from models import Pending
 from kafka_listener import initialize_kafka_listener
 
 LOG = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class UserRequestHandler(SessionMixin, tornado.web.RequestHandler):
     @coroutine
     def get(self):
         with self.make_session() as session:
-            count = yield as_future(session.query(User).count)
+            count = yield as_future(session.query(Pending).count)
 
         self.write('{} users so far!'.format(count))
 
@@ -40,7 +40,14 @@ class Application(tornado.web.Application):
 
         factory = make_session_factory(database_url)
         self._storage = StorageLayer(factory.engine)
-        initialize_kafka_listener(self._storage)
+
+        # TODO: Make a REST API call to /application_types and save id for "name": "/insights/platform/cost-management" object
+        # Then the Sources.create and Sources.destroy kafka message event types should have source_id in the payload that we can filter on application_type_id (Double check this)
+        # Need to find out how often this can/should change and move it somewhere else to it's own event loop to be listening for application_source_id changes.
+
+        self._cost_management_source_id = 2
+
+        initialize_kafka_listener(self._storage, self._cost_management_source_id)
 
         tornado.web.Application.__init__(self, handlers, session_factory=factory)
 

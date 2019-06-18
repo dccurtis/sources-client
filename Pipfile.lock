@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "1b64741d73c959c58b0022de6391e75f07db9e35bdb2c0b27869eb4c6c1eb196"
+            "sha256": "d2f35b3c91cc405b1e5c23101013a95166e97925f1d7cadf6ae00b0300dfe4ba"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -85,6 +85,21 @@
             ],
             "index": "pypi",
             "version": "==2.8.3"
+        },
+        "python-dateutil": {
+            "hashes": [
+                "sha256:7e6584c74aeed623791615e26efd690f29817a27c73085b78e4bad02493df2fb",
+                "sha256:c89805f6f4d64db21ed966fda138f8a5ed7a4fdbc1a8ee329ce1b74e3c74da9e"
+            ],
+            "index": "pypi",
+            "version": "==2.8.0"
+        },
+        "six": {
+            "hashes": [
+                "sha256:3350809f0555b11f552448330d0b52d5f24c91a322ea4a15ef22629740f3761c",
+                "sha256:d16a0141ec1a18405cd4ce8b4613101da75da0e9a7aec5bdd4fa804d0e0eba73"
+            ],
+            "version": "==1.12.0"
         },
         "sqlalchemy": {
             "hashes": [
@@ -192,7 +207,6 @@
         },
         "wrapt": {
             "hashes": [
-                "sha256:176547066e14b9d95550b99d1d070e7c1cdc0a07d21c139c53e8a20bdcfb2f92",
                 "sha256:565a021fd19419476b9362b05eeaa094178de64f8361e44468f9e9d7843901e1"
             ],
             "version": "==1.11.2"

@@ -15,7 +15,7 @@ Config().setup_logger(LOG)
 class KafkaMsgHandlerError(Exception):
     """Kafka mmsg handler error."""
 
-def handle_message(msg):
+def filter_message(msg, application_source_id):
     """
     Handle messages from message pending queue.
 
@@ -55,7 +55,11 @@ def handle_message(msg):
         try:
             value = json.loads(msg.value.decode('utf-8'))
             print('handle msg value: ', str(value))
-            return True
+            if value.get('application_type_id') == application_source_id:
+                return True
+            else:
+                print('Ignoring message; wrong application source id')
+                return False
         except Exception as error:
             LOG.error('Unable load message. Error: %s', str(error))
             return False
@@ -63,7 +67,7 @@ def handle_message(msg):
         LOG.error('Unexpected Message')
     return False
 
-async def process_messages(msg_pending_queue, storage):  # pragma: no cover
+async def process_messages(msg_pending_queue, storage, application_source_id):  # pragma: no cover
     """
     Process asyncio MSG_PENDING_QUEUE and send validation status.
 
@@ -76,18 +80,8 @@ async def process_messages(msg_pending_queue, storage):  # pragma: no cover
     """
     while True:
         msg = await msg_pending_queue.get()
-        status = handle_message(msg)
-        if status:
-            value = json.loads(msg.value.decode('utf-8'))
-            offset = msg.offset
-            print('Message Offset: ', offset)
-            username = value.get('username', None)
-            operation = value.get('operation', None)
-            if username and operation:
-                print('Found Username: ', username)
-                print('Found Operation: ', operation)
-                storage.store_event(offset,operation, username)
-
+        if filter_message(msg, application_source_id):
+            storage.store_event(msg)
 
 
 async def listen_for_messages(consumer, msg_pending_queue):  # pragma: no cover
@@ -120,7 +114,7 @@ async def listen_for_messages(consumer, msg_pending_queue):  # pragma: no cover
         await consumer.stop()
 
 
-def asyncio_listener_thread(storage):
+def asyncio_listener_thread(storage, application_source_id):
     """
     Worker thread function to run the asyncio event loop.
 
@@ -140,7 +134,7 @@ def asyncio_listener_thread(storage):
                 loop=event_loop, bootstrap_servers=Config.SOURCES_KAFKA_ADDRESS
             )
 
-            event_loop.create_task(process_messages(pending_process_queue, storage))
+            event_loop.create_task(process_messages(pending_process_queue, storage, application_source_id))
 
             try:
                 event_loop.run_until_complete(listen_for_messages(consumer, pending_process_queue))
@@ -151,8 +145,8 @@ def asyncio_listener_thread(storage):
     except KeyboardInterrupt:
         exit(0)
 
-def initialize_kafka_listener(storage):
-    event_loop_thread = threading.Thread(target=asyncio_listener_thread, args=(storage,))
+def initialize_kafka_listener(storage, application_source_id):
+    event_loop_thread = threading.Thread(target=asyncio_listener_thread, args=(storage, application_source_id))
     event_loop_thread.daemon = True
     event_loop_thread.start()
     print('Listening for kafka events')
