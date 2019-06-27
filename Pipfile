@@ -14,6 +14,7 @@ psycopg2-binary = ">=2.7.0"
 sqlalchemy = "==1.3.3"
 tornado-sqlalchemy = "==0.6.1"
 python-dateutil = "==2.8.0"
+requests = "==2.22.0"
 
 [requires]
 python_version = "3.6"

@@ -4,21 +4,20 @@ from sqlalchemy.ext.declarative import declarative_base
 
 DeclarativeBase = declarative_base()
 
-class Pending(DeclarativeBase):
-    __tablename__ = 'pending_msg'
+class Provider(DeclarativeBase):
+    __tablename__ = 'provider'
 
-    id = Column(BigInteger, primary_key=True)
-    offset = Column(Integer, unique=True)
-    created_at = Column(DateTime(timezone=True))
-    operation = Column(String(128))
+    source_id = Column(Integer, primary_key=True)
     name = Column(String(128))
-    tenant = Column(String(128))
+    source_type = Column(String(128))
+    authentication = Column(String(128))
+    billing_source = Column(String(128))
+    koku_uuid = Column(String(128))
     auth_header = Column(String(512))
 
-def __repr__(self):
-    return "<Pending('%s')>" % (self.name)
+    def __repr__(self):
+        return "<Provider('%s')>" % (self.name)
+
 
 def create_all(engine):
     DeclarativeBase.metadata.create_all(engine)
-
-# handle msg value:  {"id":16,"name":"AWS","uid":"9688fc8c-4922-4164-8eed-907c2fd6e0a5","created_at":"2019-06-18 18:09:14 UTC","updated_at":"2019-06-18 18:09:14 UTC","source_type_id":2,"version":null,"tenant":"1001"}

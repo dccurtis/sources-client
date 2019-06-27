@@ -9,6 +9,10 @@ from kafka.errors import ConnectionError as KafkaConnectionError
 
 from config import Config
 from storage import StorageLayer
+from utils import extract_from_header
+from sources_http_client import SourcesHTTPClient
+from koku_http_client import KokuHTTPClient
+
 LOG = logging.getLogger(__name__)
 Config().setup_logger(LOG)
 
@@ -16,88 +20,78 @@ class KafkaMsgHandlerError(Exception):
     """Kafka mmsg handler error."""
 
 def filter_message(msg, application_source_id):
-    """
-    Handle messages from message pending queue.
-
-    Handle's messages with topics: 'platform.upload.hccm',
-    and 'platform.upload.available'.
-
-    The OCP cost usage payload will land on topic hccm.
-    These messages will be extracted into the local report
-    directory structure.  Once the file has been verified
-    (successfully extracted) we will report the status to
-    the Insights Upload Service so the file can be made available
-    to other apps on the service.
-
-    Messages on the available topic are messages that have
-    been verified by an app on the Insights upload service.
-    For now we are just logging the URL for demonstration purposes.
-    In the future if we want to maintain a URL to our report files
-    in the upload service we could look for hashes for files that
-    we have previously validated on the hccm topic.
-
-
-    Args:
-        msg - Upload Service message containing usage payload information.
-
-    Returns:
-        (String, dict) - String: Upload Service confirmation status
-                         dict: keys: value
-                               file: String,
-                               cluster_id: String,
-                               payload_date: DateTime,
-                               manifest_path: String,
-                               uuid: String,
-                               manifest_path: String
-
-    """
     if msg.topic == Config.SOURCES_TOPIC:
-        try:
+        if extract_from_header(msg.headers, 'event_type') == 'Application.create':
+            try:
+                value = json.loads(msg.value.decode('utf-8'))
+                print('handle msg value: ', str(value))
+                if int(value.get('application_type_id')) == application_source_id:
+                    return True, 'create'
+                else:
+                    print('Ignoring message; wrong application source id')
+                    return False, None
+            except Exception as error:
+                LOG.error('Unable load message. Error: %s', str(error))
+                return False, None
+        elif extract_from_header(msg.headers, 'event_type') == 'Application.destroy':
+            try:
+                value = json.loads(msg.value.decode('utf-8'))
+                print('handle msg value: ', str(value))
+                if int(value.get('application_type_id')) == application_source_id:
+                    return True, 'destroy'
+                else:
+                    print('Ignoring message; wrong application source id')
+                    return False, None
+            except Exception as error:
+                LOG.error('Unable load message. Error: %s', str(error))
+                return False, None
+        else:
             value = json.loads(msg.value.decode('utf-8'))
-            print('handle msg value: ', str(value))
-            if value.get('application_type_id') == application_source_id:
-                return True
-            else:
-                print('Ignoring message; wrong application source id')
-                return False
-        except Exception as error:
-            LOG.error('Unable load message. Error: %s', str(error))
-            return False
+            print('Unhandled event type ', str(value))
+            return False, None
     else:
         LOG.error('Unexpected Message')
     return False
 
+async def sources_network_info(storage, source_id, auth_header):
+    sources_network = SourcesHTTPClient(source_id, auth_header)
+    source_details = sources_network.get_source_details()
+    source_name = source_details.get('name')
+    source_type_id = int(source_details.get('source_type_id'))
+
+    if source_type_id == 1:
+        source_type = 'OCP'
+        authentication = source_details.get('uid')
+    elif source_type_id == 2:
+        source_type = 'AWS'
+        authentication = 'sample_role_arn'
+    else:
+        source_type = 'UNK'
+
+    storage.add_provider_sources_network_info(source_id, source_name, source_type, authentication)
+
 async def process_messages(msg_pending_queue, storage, application_source_id):  # pragma: no cover
-    """
-    Process asyncio MSG_PENDING_QUEUE and send validation status.
-
-    Args:
-        None
-
-    Returns:
-        None
-
-    """
     while True:
         msg = await msg_pending_queue.get()
-        if filter_message(msg, application_source_id):
-            storage.store_event(msg)
+        valid_msg, operation = filter_message(msg, application_source_id)
+        if valid_msg and operation == 'create':
+            storage.create_provider_event(msg)
+            auth_header = extract_from_header(msg.headers, 'x-rh-identity')
+            value = json.loads(msg.value.decode('utf-8'))
+            source_id = int(value.get('source_id'))
+            await sources_network_info(storage, source_id, auth_header)
+        elif valid_msg and operation == 'destroy':
+            #TODO: Move koku remove to provider_builder thread
+            koku_uuid = storage.destroy_provider_event(msg)
+            value = json.loads(msg.value.decode('utf-8'))
+            source_id = int(value.get('source_id'))
+            auth_header = extract_from_header(msg.headers, 'x-rh-identity')
+            koku_client = KokuHTTPClient(source_id, auth_header)
+            koku_client.destroy_provider(koku_uuid)
+
 
 
 async def listen_for_messages(consumer, msg_pending_queue):  # pragma: no cover
-    """
-    Listen for messages on the available and hccm topics.
-
-    Once a message from one of these topics arrives, we add
-    them to the MSG_PENDING_QUEUE.
-
-    Args:
-        None
-
-    Returns:
-        None
-
-    """
     try:
         await consumer.start()
     except KafkaConnectionError:
@@ -116,7 +110,7 @@ async def listen_for_messages(consumer, msg_pending_queue):  # pragma: no cover
 
 def asyncio_listener_thread(storage, application_source_id):
     """
-    Worker thread function to run the asyncio event loop.
+    Listener thread function to run the asyncio event loop.
 
     Args:
         None
