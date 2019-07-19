@@ -54,7 +54,7 @@ def filter_message(msg, application_source_id):
     return False
 
 async def sources_network_info(storage, source_id, auth_header):
-    sources_network = SourcesHTTPClient(source_id, auth_header)
+    sources_network = SourcesHTTPClient(auth_header, source_id)
     source_details = sources_network.get_source_details()
     source_name = source_details.get('name')
     source_type_id = int(source_details.get('source_type_id'))
@@ -64,15 +64,20 @@ async def sources_network_info(storage, source_id, auth_header):
         authentication = source_details.get('uid')
     elif source_type_id == 2:
         source_type = 'AWS'
-        authentication = 'sample_role_arn'
+        authentication = sources_network.get_aws_role_arn()
     else:
         source_type = 'UNK'
 
     storage.add_provider_sources_network_info(source_id, source_name, source_type, authentication)
 
-async def process_messages(msg_pending_queue, storage, application_source_id):  # pragma: no cover
+async def process_messages(msg_pending_queue, storage):  # pragma: no cover
+    application_source_id = None
     while True:
         msg = await msg_pending_queue.get()
+        if not application_source_id:
+            fake_header = 'eyJpZGVudGl0eSI6IHsiYWNjb3VudF9udW1iZXIiOiAiMTIzNDUiLCAiaW50ZXJuYWwiOiB7Im9yZ19pZCI6ICI1NDMyMSJ9fX0='
+            application_source_id = SourcesHTTPClient(fake_header).get_cost_management_application_type_id()
+
         valid_msg, operation = filter_message(msg, application_source_id)
         if valid_msg and operation == 'create':
             storage.create_provider_event(msg)
@@ -108,7 +113,7 @@ async def listen_for_messages(consumer, msg_pending_queue):  # pragma: no cover
         await consumer.stop()
 
 
-def asyncio_listener_thread(storage, application_source_id):
+def asyncio_listener_thread(storage):
     """
     Listener thread function to run the asyncio event loop.
 
@@ -121,6 +126,7 @@ def asyncio_listener_thread(storage, application_source_id):
     """
     event_loop = asyncio.new_event_loop()
     pending_process_queue = asyncio.Queue(loop=event_loop)
+
     try:
         while True:
             consumer = AIOKafkaConsumer(
@@ -128,7 +134,7 @@ def asyncio_listener_thread(storage, application_source_id):
                 loop=event_loop, bootstrap_servers=Config.SOURCES_KAFKA_ADDRESS
             )
 
-            event_loop.create_task(process_messages(pending_process_queue, storage, application_source_id))
+            event_loop.create_task(process_messages(pending_process_queue, storage))
 
             try:
                 event_loop.run_until_complete(listen_for_messages(consumer, pending_process_queue))
@@ -139,8 +145,8 @@ def asyncio_listener_thread(storage, application_source_id):
     except KeyboardInterrupt:
         exit(0)
 
-def initialize_kafka_listener(storage, application_source_id):
-    event_loop_thread = threading.Thread(target=asyncio_listener_thread, args=(storage, application_source_id))
+def initialize_kafka_listener(storage):
+    event_loop_thread = threading.Thread(target=asyncio_listener_thread, args=(storage,))
     event_loop_thread.daemon = True
     event_loop_thread.start()
     print('Listening for kafka events')

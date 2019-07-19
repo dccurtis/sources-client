@@ -60,13 +60,7 @@ class Application(tornado.web.Application):
         factory = make_session_factory(database_url)
         self._storage = StorageLayer(factory.engine)
 
-        # TODO: Make a REST API call to /application_types and save id for "name": "/insights/platform/cost-management" object
-        # Then the Sources.create and Sources.destroy kafka message event types should have source_id in the payload that we can filter on application_type_id (Double check this)
-        # Need to find out how often this can/should change and move it somewhere else to it's own event loop to be listening for application_source_id changes.
-
-        self._cost_management_source_id = 2
-
-        initialize_kafka_listener(self._storage, self._cost_management_source_id)
+        initialize_kafka_listener(self._storage)
         initialize_provider_builder(self._storage)
 
         tornado.web.Application.__init__(self, handlers, session_factory=factory)
